@@ -940,6 +940,297 @@ describe("LockBox - Solana Savings Vault", () => {
     });
   });
 
+  describe("Close LockBox", () => {
+    it("✅ Close LockBox successfully when vault is empty", async () => {
+      const testUser = Keypair.generate();
+      await airdrop(testUser.publicKey, 10 * LAMPORTS_PER_SOL);
+      const [lockboxPda] = getLockBoxPda(testUser.publicKey);
+      const [vaultPda] = getVaultPda(lockboxPda);
+
+      // Create lockbox
+      await program.methods
+        .initializeLockbox(new BN(5 * LAMPORTS_PER_SOL))
+        .accounts({
+          lockbox: lockboxPda,
+          owner: testUser.publicKey,
+          systemProgram: SystemProgram.programId,
+        })
+        .signers([testUser])
+        .rpc({ commitment: "confirmed" });
+
+      // Get balance before closing
+      const balanceBefore = await getBalance(testUser.publicKey);
+
+      // Close the lockbox (vault is empty, so this should work)
+      await program.methods
+        .closeLockbox()
+        .accounts({
+          lockbox: lockboxPda,
+          owner: testUser.publicKey,
+          vault: vaultPda,
+          systemProgram: SystemProgram.programId,
+        })
+        .signers([testUser])
+        .rpc({ commitment: "confirmed" });
+
+      // Get balance after closing
+      const balanceAfter = await getBalance(testUser.publicKey);
+
+      // Verify lockbox account is closed
+      try {
+        await program.account.lockBox.fetch(lockboxPda);
+        assert.fail("LockBox account should be closed");
+      } catch (error) {
+        assert.ok(
+          error.message.includes("Account does not exist"),
+          "LockBox should not exist after closing"
+        );
+      }
+
+      // Verify rent was returned (balance should increase)
+      assert.ok(
+        balanceAfter > balanceBefore,
+        "Rent should be returned to owner"
+      );
+
+      console.log("  ✅ LockBox closed and rent returned");
+    });
+
+    it("❌ Cannot close LockBox with funds in vault", async () => {
+      const testUser = Keypair.generate();
+      await airdrop(testUser.publicKey, 10 * LAMPORTS_PER_SOL);
+      const [lockboxPda] = getLockBoxPda(testUser.publicKey);
+      const [vaultPda] = getVaultPda(lockboxPda);
+
+      // Create lockbox
+      await program.methods
+        .initializeLockbox(new BN(5 * LAMPORTS_PER_SOL))
+        .accounts({
+          lockbox: lockboxPda,
+          owner: testUser.publicKey,
+          systemProgram: SystemProgram.programId,
+        })
+        .signers([testUser])
+        .rpc({ commitment: "confirmed" });
+
+      // Deposit some funds
+      await program.methods
+        .deposit(new BN(2 * LAMPORTS_PER_SOL))
+        .accounts({
+          lockbox: lockboxPda,
+          owner: testUser.publicKey,
+          vault: vaultPda,
+          systemProgram: SystemProgram.programId,
+        })
+        .signers([testUser])
+        .rpc({ commitment: "confirmed" });
+
+      // Try to close - should fail because vault has funds
+      try {
+        await program.methods
+          .closeLockbox()
+          .accounts({
+            lockbox: lockboxPda,
+            owner: testUser.publicKey,
+            vault: vaultPda,
+            systemProgram: SystemProgram.programId,
+          })
+          .signers([testUser])
+          .rpc({ commitment: "confirmed" });
+        assert.fail("Should not be able to close with funds in vault");
+      } catch (error) {
+        assert.ok(
+          error.message.includes("InsufficientBalance"),
+          "Should throw InsufficientBalance error"
+        );
+      }
+
+      console.log("  ✅ Correctly prevented closing with funds in vault");
+    });
+
+    it("✅ Close after emergency withdraw", async () => {
+      const testUser = Keypair.generate();
+      await airdrop(testUser.publicKey, 10 * LAMPORTS_PER_SOL);
+      const [lockboxPda] = getLockBoxPda(testUser.publicKey);
+      const [vaultPda] = getVaultPda(lockboxPda);
+
+      // Create lockbox
+      await program.methods
+        .initializeLockbox(new BN(5 * LAMPORTS_PER_SOL))
+        .accounts({
+          lockbox: lockboxPda,
+          owner: testUser.publicKey,
+          systemProgram: SystemProgram.programId,
+        })
+        .signers([testUser])
+        .rpc({ commitment: "confirmed" });
+
+      // Deposit some funds
+      await program.methods
+        .deposit(new BN(2 * LAMPORTS_PER_SOL))
+        .accounts({
+          lockbox: lockboxPda,
+          owner: testUser.publicKey,
+          vault: vaultPda,
+          systemProgram: SystemProgram.programId,
+        })
+        .signers([testUser])
+        .rpc({ commitment: "confirmed" });
+
+      // Emergency withdraw (empties vault and deactivates)
+      await program.methods
+        .emergencyWithdraw()
+        .accounts({
+          lockbox: lockboxPda,
+          owner: testUser.publicKey,
+          vault: vaultPda,
+          systemProgram: SystemProgram.programId,
+        })
+        .signers([testUser])
+        .rpc({ commitment: "confirmed" });
+
+      // Now close the lockbox (vault is empty after emergency withdraw)
+      await program.methods
+        .closeLockbox()
+        .accounts({
+          lockbox: lockboxPda,
+          owner: testUser.publicKey,
+          vault: vaultPda,
+          systemProgram: SystemProgram.programId,
+        })
+        .signers([testUser])
+        .rpc({ commitment: "confirmed" });
+
+      // Verify account is closed
+      try {
+        await program.account.lockBox.fetch(lockboxPda);
+        assert.fail("LockBox account should be closed");
+      } catch (error) {
+        assert.ok(
+          error.message.includes("Account does not exist"),
+          "LockBox should not exist after closing"
+        );
+      }
+
+      console.log("  ✅ Successfully closed after emergency withdraw");
+    });
+
+    it("✅ Close after reaching goal and withdrawing all funds", async () => {
+      const testUser = Keypair.generate();
+      await airdrop(testUser.publicKey, 10 * LAMPORTS_PER_SOL);
+      const [lockboxPda] = getLockBoxPda(testUser.publicKey);
+      const [vaultPda] = getVaultPda(lockboxPda);
+
+      // Create lockbox
+      await program.methods
+        .initializeLockbox(new BN(3 * LAMPORTS_PER_SOL))
+        .accounts({
+          lockbox: lockboxPda,
+          owner: testUser.publicKey,
+          systemProgram: SystemProgram.programId,
+        })
+        .signers([testUser])
+        .rpc({ commitment: "confirmed" });
+
+      // Deposit to reach goal
+      await program.methods
+        .deposit(new BN(3 * LAMPORTS_PER_SOL))
+        .accounts({
+          lockbox: lockboxPda,
+          owner: testUser.publicKey,
+          vault: vaultPda,
+          systemProgram: SystemProgram.programId,
+        })
+        .signers([testUser])
+        .rpc({ commitment: "confirmed" });
+
+      // Withdraw all funds
+      await program.methods
+        .withdraw(new BN(3 * LAMPORTS_PER_SOL))
+        .accounts({
+          lockbox: lockboxPda,
+          owner: testUser.publicKey,
+          vault: vaultPda,
+          systemProgram: SystemProgram.programId,
+        })
+        .signers([testUser])
+        .rpc({ commitment: "confirmed" });
+
+      // Close the lockbox
+      await program.methods
+        .closeLockbox()
+        .accounts({
+          lockbox: lockboxPda,
+          owner: testUser.publicKey,
+          vault: vaultPda,
+          systemProgram: SystemProgram.programId,
+        })
+        .signers([testUser])
+        .rpc({ commitment: "confirmed" });
+
+      // Verify account is closed
+      try {
+        await program.account.lockBox.fetch(lockboxPda);
+        assert.fail("LockBox account should be closed");
+      } catch (error) {
+        assert.ok(
+          error.message.includes("Account does not exist"),
+          "LockBox should not exist after closing"
+        );
+      }
+
+      console.log("  ✅ Successfully closed after normal withdrawal");
+    });
+
+    it("❌ Cannot close someone else's LockBox", async () => {
+      const owner = Keypair.generate();
+      const attacker = Keypair.generate();
+      await airdrop(owner.publicKey, 10 * LAMPORTS_PER_SOL);
+      await airdrop(attacker.publicKey, 10 * LAMPORTS_PER_SOL);
+      const [lockboxPda] = getLockBoxPda(owner.publicKey);
+      const [vaultPda] = getVaultPda(lockboxPda);
+
+      // Owner creates lockbox
+      await program.methods
+        .initializeLockbox(new BN(5 * LAMPORTS_PER_SOL))
+        .accounts({
+          lockbox: lockboxPda,
+          owner: owner.publicKey,
+          systemProgram: SystemProgram.programId,
+        })
+        .signers([owner])
+        .rpc({ commitment: "confirmed" });
+
+      // Attacker tries to close owner's lockbox
+      try {
+        await program.methods
+          .closeLockbox()
+          .accounts({
+            lockbox: lockboxPda,
+            owner: attacker.publicKey,
+            vault: vaultPda,
+            systemProgram: SystemProgram.programId,
+          })
+          .signers([attacker])
+          .rpc({ commitment: "confirmed" });
+        assert.fail("Should not allow closing someone else's LockBox");
+      } catch (error) {
+        assert.ok(
+          error.message.includes("ConstraintSeeds") ||
+            error.message.includes("Unauthorized") ||
+            error.message.includes("has_one"),
+          "Should fail authorization check"
+        );
+      }
+
+      // Verify lockbox still exists
+      const lockboxAccount = await program.account.lockBox.fetch(lockboxPda);
+      assert.ok(lockboxAccount, "LockBox should still exist");
+
+      console.log("  ✅ Correctly prevented unauthorized close");
+    });
+  });
+
   describe("Complete User Journey", () => {
     it("✅ Full savings journey: create, save, reach goal, withdraw", async () => {
       const saver = Keypair.generate();

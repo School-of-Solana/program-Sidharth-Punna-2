@@ -6,7 +6,7 @@ pub mod states;
 
 use instructions::*;
 
-declare_id!("CFqTCCmeoUyHUMmhZRJ5JyBLmSQWaqcqsd6A8rtH6MWR");
+declare_id!("FkFyFob5oYm4Q9aukvK1ttXduveWh16HYmhCvMXyw6tr");
 
 #[program]
 pub mod lock_box_anchor {
@@ -30,5 +30,10 @@ pub mod lock_box_anchor {
     /// Emergency withdrawal - withdraws all funds but deactivates the vault permanently
     pub fn emergency_withdraw(ctx: Context<EmergencyWithdraw>) -> Result<()> {
         instructions::emergency_withdraw(ctx)
+    }
+
+    /// Close the LockBox account and reclaim rent (vault must be empty)
+    pub fn close_lockbox(ctx: Context<CloseLockBox>) -> Result<()> {
+        instructions::close_lockbox(ctx)
     }
 }
