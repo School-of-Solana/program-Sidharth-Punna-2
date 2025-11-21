@@ -9,7 +9,8 @@ pub struct EmergencyWithdraw<'info> {
         mut,
         seeds = [LOCKBOX_SEED, owner.key().as_ref()],
         bump = lockbox.bump,
-        has_one = owner @ LockBoxError::Unauthorized
+        has_one = owner @ LockBoxError::Unauthorized,
+        close = owner
     )]
     pub lockbox: Account<'info, LockBox>,
 
@@ -33,7 +34,8 @@ pub fn emergency_withdraw(ctx: Context<EmergencyWithdraw>) -> Result<()> {
     // Check if vault is still active
     require!(lockbox.is_active, LockBoxError::VaultInactive);
 
-    let withdraw_amount = lockbox.current_balance;
+    // Withdraw everything in the vault
+    let withdraw_amount = ctx.accounts.vault.lamports();
 
     // Check if there's anything to withdraw
     require!(withdraw_amount > 0, LockBoxError::InsufficientBalance);
@@ -54,16 +56,11 @@ pub fn emergency_withdraw(ctx: Context<EmergencyWithdraw>) -> Result<()> {
 
     transfer(cpi_context, withdraw_amount)?;
 
-    // Update lockbox - deactivate and reset balance
-    let lockbox = &mut ctx.accounts.lockbox;
-    lockbox.current_balance = 0;
-    lockbox.is_active = false; // Vault becomes inaccessible after emergency withdrawal
-
     msg!(
         "⚠️ Emergency withdrawal executed! Withdrawn {} lamports.",
         withdraw_amount
     );
-    msg!("This vault is now INACTIVE and cannot be used anymore.");
+    msg!("The LockBox account is now closed.");
 
     Ok(())
 }
