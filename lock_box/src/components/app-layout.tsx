@@ -16,7 +16,7 @@ export function AppLayout({
   links: { label: string; path: string }[]
 }) {
   return (
-    <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+    <ThemeProvider attribute="class" forcedTheme="dark" enableSystem={false} disableTransitionOnChange>
       <div className="flex flex-col min-h-screen">
         <AppHeader links={links} />
         <main className="flex-grow container mx-auto p-4">
@@ -25,7 +25,6 @@ export function AppLayout({
           </ClusterChecker>
           {children}
         </main>
-        <AppFooter />
       </div>
       <Toaster />
     </ThemeProvider>
