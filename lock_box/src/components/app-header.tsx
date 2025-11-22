@@ -45,7 +45,7 @@ export function AppHeader({ links = [] }: { links: { label: string; path: string
                     className={cn(
                       'px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-2',
                       'hover:bg-accent hover:text-accent-foreground',
-                      isActive(path) ? 'bg-accent text-accent-foreground' : 'text-muted-foreground',
+                      isActive(path) ? 'rounded-b-none border-b-2 border-primary' : 'text-muted-foreground',
                     )}
                   >
                     <Icon className="h-4 w-4" />

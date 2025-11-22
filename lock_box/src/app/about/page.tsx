@@ -2,6 +2,7 @@ import { GradualSpacing } from '@/components/ui/gradual-spacing-test'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Lock, Target, Wallet, Shield } from 'lucide-react'
 import { Metadata } from 'next'
+import { cn } from '@/lib/utils'
 
 export const metadata: Metadata = {
   title: 'About LockBox',
@@ -9,6 +10,7 @@ export const metadata: Metadata = {
 }
 
 export default function AboutPage() {
+  const borderClassName = 'hover:border-primary/50 transition-colors duration-300'
   return (
     <div className="container mx-auto py-12 px-4 max-w-7xl">
       {/* Title with GradualSpacing */}
@@ -27,7 +29,12 @@ export default function AboutPage() {
       {/* Bento Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 auto-rows-fr">
         {/* Hero Card - Spans 2 columns */}
-        <Card className="md:col-span-2 lg:row-span-2 bg-gradient-to-br from-primary/10 via-primary/5 to-background border-primary/20">
+        <Card
+          className={cn(
+            'md:col-span-2 lg:row-span-2 bg-gradient-to-br from-primary/10 via-primary/5 to-background border-primary/20',
+            borderClassName,
+          )}
+        >
           <CardHeader>
             <div className="flex items-center gap-3 mb-2">
               <div className="w-12 h-12 rounded-lg bg-primary/20 flex items-center justify-center">
@@ -51,7 +58,7 @@ export default function AboutPage() {
         </Card>
 
         {/* Key Features - Combined Card */}
-        <Card className="md:col-span-2 lg:col-span-2 group hover:border-primary/50 transition-colors">
+        <Card className={cn('md:col-span-2 lg:col-span-2 group', borderClassName)}>
           <CardHeader>
             <CardTitle className="text-xl flex items-center gap-2">
               <Target className="w-5 h-5 text-primary" />
@@ -119,7 +126,7 @@ export default function AboutPage() {
         </Card>
 
         {/* How to Use - Large Card spanning 2 columns */}
-        <Card className="md:col-span-2 lg:col-span-2">
+        <Card className={cn('md:col-span-2 lg:col-span-2', borderClassName)}>
           <CardHeader>
             <div className="flex items-center gap-3 mb-2">
               <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">

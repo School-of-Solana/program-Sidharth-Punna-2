@@ -2,7 +2,7 @@
 
 import { AnchorProvider } from '@coral-xyz/anchor'
 import { useConnection, useWallet } from '@solana/wallet-adapter-react'
-import { PublicKey, SystemProgram, LAMPORTS_PER_SOL } from '@solana/web3.js'
+import { PublicKey, LAMPORTS_PER_SOL } from '@solana/web3.js'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { BN } from '@coral-xyz/anchor'
 import { toast } from 'sonner'
@@ -11,11 +11,6 @@ import { getLockBoxProgram, LOCK_BOX_PROGRAM_ID } from '@/anchor/lock_box_export
 // Helper function to derive LockBox PDA
 function getLockBoxPda(owner: PublicKey): [PublicKey, number] {
   return PublicKey.findProgramAddressSync([Buffer.from('lockbox'), owner.toBuffer()], LOCK_BOX_PROGRAM_ID)
-}
-
-// Helper function to derive Vault PDA
-function getVaultPda(lockbox: PublicKey): [PublicKey, number] {
-  return PublicKey.findProgramAddressSync([Buffer.from('vault'), lockbox.toBuffer()], LOCK_BOX_PROGRAM_ID)
 }
 
 // Hook to get Anchor provider
