@@ -8,12 +8,25 @@ skip-lint = false
 [programs.devnet]
 lock_box_anchor = "FkFyFob5oYm4Q9aukvK1ttXduveWh16HYmhCvMXyw6tr"
 
+[programs.localnet]
+lock_box_anchor = "FkFyFob5oYm4Q9aukvK1ttXduveWh16HYmhCvMXyw6tr"
+
 [registry]
 url = "https://api.apr.dev"
 
 [provider]
 cluster = "devnet"
 wallet = "~/.config/solana/id.json"
+
+[provider.localnet]
+cluster = "localnet"
+wallet = "~/.config/solana/id.json"
+
+[provider.devnet]
+cluster = "devnet"
+wallet = "~/.config/solana/devnet.json"   # use your Devnet key here
+
+
 
 [scripts]
 test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"

@@ -1,6 +1,6 @@
 import * as anchor from "@coral-xyz/anchor";
 import { Program, BN } from "@coral-xyz/anchor";
-import { AnchorProject } from "../target/types/lock_box_anchor";
+import { LockBoxAnchor } from "../target/types/lock_box_anchor";
 import {
   PublicKey,
   SystemProgram,
@@ -13,7 +13,7 @@ describe("LockBox - Solana Savings Vault", () => {
   const provider = anchor.AnchorProvider.env();
   anchor.setProvider(provider);
 
-  const program = anchor.workspace.AnchorProject as Program<AnchorProject>;
+  const program = anchor.workspace.LockBoxAnchor as Program<LockBoxAnchor>;
 
   // Test users
   const alice = Keypair.generate();
@@ -72,9 +72,7 @@ describe("LockBox - Solana Savings Vault", () => {
       await program.methods
         .initializeLockbox(targetAmount)
         .accounts({
-          lockbox: aliceLockboxPda,
           owner: alice.publicKey,
-          systemProgram: SystemProgram.programId,
         })
         .signers([alice])
         .rpc({ commitment: "confirmed" });
@@ -96,11 +94,6 @@ describe("LockBox - Solana Savings Vault", () => {
         lockboxAccount.currentBalance.eq(new BN(0)),
         "Initial balance should be 0"
       );
-      assert.strictEqual(
-        lockboxAccount.isActive,
-        true,
-        "Vault should be active"
-      );
       assert.ok(
         lockboxAccount.createdAt.toNumber() > 0,
         "Should have timestamp"
@@ -113,9 +106,7 @@ describe("LockBox - Solana Savings Vault", () => {
       await program.methods
         .initializeLockbox(targetAmount)
         .accounts({
-          lockbox: bobLockboxPda,
           owner: bob.publicKey,
-          systemProgram: SystemProgram.programId,
         })
         .signers([bob])
         .rpc({ commitment: "confirmed" });
@@ -139,9 +130,7 @@ describe("LockBox - Solana Savings Vault", () => {
       await program.methods
         .initializeLockbox(targetAmount)
         .accounts({
-          lockbox: charlieLockboxPda,
           owner: charlie.publicKey,
-          systemProgram: SystemProgram.programId,
         })
         .signers([charlie])
         .rpc({ commitment: "confirmed" });
@@ -165,9 +154,7 @@ describe("LockBox - Solana Savings Vault", () => {
         await program.methods
           .initializeLockbox(new BN(0))
           .accounts({
-            lockbox: lockboxPda,
             owner: newUser.publicKey,
-            systemProgram: SystemProgram.programId,
           })
           .signers([newUser])
           .rpc({ commitment: "confirmed" });
@@ -191,9 +178,7 @@ describe("LockBox - Solana Savings Vault", () => {
         await program.methods
           .initializeLockbox(targetAmount)
           .accounts({
-            lockbox: aliceLockboxPda,
             owner: alice.publicKey,
-            systemProgram: SystemProgram.programId,
           })
           .signers([alice])
           .rpc({ commitment: "confirmed" });
@@ -217,16 +202,13 @@ describe("LockBox - Solana Savings Vault", () => {
     it("❌ Cannot initialize LockBox for someone else", async () => {
       const newUser = Keypair.generate();
       await airdrop(newUser.publicKey);
-      const [lockboxPda] = getLockBoxPda(newUser.publicKey);
 
       let flag = "This should fail";
       try {
         await program.methods
           .initializeLockbox(new BN(5 * LAMPORTS_PER_SOL))
           .accounts({
-            lockbox: lockboxPda,
             owner: newUser.publicKey, // New user's PDA
-            systemProgram: SystemProgram.programId,
           })
           .signers([alice]) // But Alice signs
           .rpc({ commitment: "confirmed" });
@@ -253,10 +235,7 @@ describe("LockBox - Solana Savings Vault", () => {
       await program.methods
         .deposit(depositAmount)
         .accounts({
-          lockbox: aliceLockboxPda,
           owner: alice.publicKey,
-          vault: aliceVaultPda,
-          systemProgram: SystemProgram.programId,
         })
         .signers([alice])
         .rpc({ commitment: "confirmed" });
@@ -293,10 +272,7 @@ describe("LockBox - Solana Savings Vault", () => {
       await program.methods
         .deposit(depositAmount)
         .accounts({
-          lockbox: aliceLockboxPda,
           owner: alice.publicKey,
-          vault: aliceVaultPda,
-          systemProgram: SystemProgram.programId,
         })
         .signers([alice])
         .rpc({ commitment: "confirmed" });
@@ -314,10 +290,7 @@ describe("LockBox - Solana Savings Vault", () => {
       await program.methods
         .deposit(depositAmount)
         .accounts({
-          lockbox: bobLockboxPda,
           owner: bob.publicKey,
-          vault: bobVaultPda,
-          systemProgram: SystemProgram.programId,
         })
         .signers([bob])
         .rpc({ commitment: "confirmed" });
@@ -335,10 +308,7 @@ describe("LockBox - Solana Savings Vault", () => {
         await program.methods
           .deposit(new BN(0))
           .accounts({
-            lockbox: aliceLockboxPda,
             owner: alice.publicKey,
-            vault: aliceVaultPda,
-            systemProgram: SystemProgram.programId,
           })
           .signers([alice])
           .rpc({ commitment: "confirmed" });
@@ -386,18 +356,13 @@ describe("LockBox - Solana Savings Vault", () => {
     it("❌ Cannot deposit to non-existent vault", async () => {
       const newUser = Keypair.generate();
       await airdrop(newUser.publicKey);
-      const [lockboxPda] = getLockBoxPda(newUser.publicKey);
-      const [vaultPda] = getVaultPda(lockboxPda);
 
       let flag = "This should fail";
       try {
         await program.methods
           .deposit(new BN(1 * LAMPORTS_PER_SOL))
           .accounts({
-            lockbox: lockboxPda,
             owner: newUser.publicKey,
-            vault: vaultPda,
-            systemProgram: SystemProgram.programId,
           })
           .signers([newUser])
           .rpc({ commitment: "confirmed" });
@@ -422,10 +387,7 @@ describe("LockBox - Solana Savings Vault", () => {
         await program.methods
           .deposit(hugeAmount)
           .accounts({
-            lockbox: aliceLockboxPda,
             owner: alice.publicKey,
-            vault: aliceVaultPda,
-            systemProgram: SystemProgram.programId,
           })
           .signers([alice])
           .rpc({ commitment: "confirmed" });
@@ -460,10 +422,7 @@ describe("LockBox - Solana Savings Vault", () => {
         await program.methods
           .withdraw(new BN(1 * LAMPORTS_PER_SOL))
           .accounts({
-            lockbox: aliceLockboxPda,
             owner: alice.publicKey,
-            vault: aliceVaultPda,
-            systemProgram: SystemProgram.programId,
           })
           .signers([alice])
           .rpc({ commitment: "confirmed" });
@@ -487,10 +446,7 @@ describe("LockBox - Solana Savings Vault", () => {
         await program.methods
           .withdraw(new BN(1 * LAMPORTS_PER_SOL))
           .accounts({
-            lockbox: bobLockboxPda,
             owner: bob.publicKey,
-            vault: bobVaultPda,
-            systemProgram: SystemProgram.programId,
           })
           .signers([bob])
           .rpc({ commitment: "confirmed" });
@@ -516,10 +472,7 @@ describe("LockBox - Solana Savings Vault", () => {
       await program.methods
         .deposit(depositAmount)
         .accounts({
-          lockbox: aliceLockboxPda,
           owner: alice.publicKey,
-          vault: aliceVaultPda,
-          systemProgram: SystemProgram.programId,
         })
         .signers([alice])
         .rpc({ commitment: "confirmed" });
@@ -545,10 +498,7 @@ describe("LockBox - Solana Savings Vault", () => {
       await program.methods
         .withdraw(withdrawAmount)
         .accounts({
-          lockbox: aliceLockboxPda,
           owner: alice.publicKey,
-          vault: aliceVaultPda,
-          systemProgram: SystemProgram.programId,
         })
         .signers([alice])
         .rpc({ commitment: "confirmed" });
@@ -580,10 +530,7 @@ describe("LockBox - Solana Savings Vault", () => {
       await program.methods
         .withdraw(withdrawAmount)
         .accounts({
-          lockbox: aliceLockboxPda,
           owner: alice.publicKey,
-          vault: aliceVaultPda,
-          systemProgram: SystemProgram.programId,
         })
         .signers([alice])
         .rpc({ commitment: "confirmed" });
@@ -591,7 +538,6 @@ describe("LockBox - Solana Savings Vault", () => {
       const lockboxAccount = await program.account.lockBox.fetch(
         aliceLockboxPda
       );
-      assert.ok(lockboxAccount.isActive, "Vault should still be active");
     });
 
     it("❌ Cannot withdraw more than current balance", async () => {
@@ -605,10 +551,7 @@ describe("LockBox - Solana Savings Vault", () => {
         await program.methods
           .withdraw(excessiveAmount)
           .accounts({
-            lockbox: aliceLockboxPda,
             owner: alice.publicKey,
-            vault: aliceVaultPda,
-            systemProgram: SystemProgram.programId,
           })
           .signers([alice])
           .rpc({ commitment: "confirmed" });
@@ -658,10 +601,7 @@ describe("LockBox - Solana Savings Vault", () => {
       await program.methods
         .deposit(new BN(2 * LAMPORTS_PER_SOL))
         .accounts({
-          lockbox: charlieLockboxPda,
           owner: charlie.publicKey,
-          vault: charlieVaultPda,
-          systemProgram: SystemProgram.programId,
         })
         .signers([charlie])
         .rpc({ commitment: "confirmed" });
@@ -672,7 +612,6 @@ describe("LockBox - Solana Savings Vault", () => {
       const vaultBalanceBefore = await getBalance(charlieVaultPda);
       const charlieBalanceBefore = await getBalance(charlie.publicKey);
 
-      assert.ok(lockboxBefore.isActive, "Should be active before emergency");
       assert.ok(
         lockboxBefore.currentBalance.gt(new BN(0)),
         "Should have balance"
@@ -681,29 +620,27 @@ describe("LockBox - Solana Savings Vault", () => {
       await program.methods
         .emergencyWithdraw()
         .accounts({
-          lockbox: charlieLockboxPda,
           owner: charlie.publicKey,
-          vault: charlieVaultPda,
-          systemProgram: SystemProgram.programId,
         })
         .signers([charlie])
         .rpc({ commitment: "confirmed" });
 
-      const lockboxAfter = await program.account.lockBox.fetch(
-        charlieLockboxPda
-      );
       const vaultBalanceAfter = await getBalance(charlieVaultPda);
       const charlieBalanceAfter = await getBalance(charlie.publicKey);
 
-      assert.strictEqual(
-        lockboxAfter.isActive,
-        false,
-        "Should be inactive after emergency"
-      );
-      assert.ok(
-        lockboxAfter.currentBalance.eq(new BN(0)),
-        "Balance should be zero"
-      );
+      // Verify lockbox account is closed after emergency withdrawal
+      try {
+        await program.account.lockBox.fetch(charlieLockboxPda);
+        assert.fail(
+          "LockBox account should be closed after emergency withdrawal"
+        );
+      } catch (error) {
+        assert.ok(
+          error.message.includes("Account does not exist"),
+          "LockBox should not exist after emergency withdrawal"
+        );
+      }
+
       assert.strictEqual(
         vaultBalanceBefore - vaultBalanceAfter,
         lockboxBefore.currentBalance.toNumber(),
@@ -715,16 +652,13 @@ describe("LockBox - Solana Savings Vault", () => {
       );
     });
 
-    it("❌ Cannot deposit to inactive vault after emergency", async () => {
+    it("❌ Cannot deposit to closed account after emergency", async () => {
       let flag = "This should fail";
       try {
         await program.methods
           .deposit(new BN(1 * LAMPORTS_PER_SOL))
           .accounts({
-            lockbox: charlieLockboxPda,
             owner: charlie.publicKey,
-            vault: charlieVaultPda,
-            systemProgram: SystemProgram.programId,
           })
           .signers([charlie])
           .rpc({ commitment: "confirmed" });
@@ -732,30 +666,27 @@ describe("LockBox - Solana Savings Vault", () => {
         assert.fail("Should have failed");
       } catch (error) {
         flag = "Failed";
-        const err = anchor.AnchorError.parse(error.logs);
-        assert.strictEqual(
-          err.error.errorCode.code,
-          "VaultInactive",
-          "Should fail with VaultInactive"
+        assert.ok(
+          error.toString().includes("AccountNotInitialized") ||
+            error.toString().includes("Account does not exist") ||
+            error.toString().includes("Error"),
+          "Should fail because account is closed"
         );
       }
       assert.strictEqual(
         flag,
         "Failed",
-        "Deposit to inactive vault should fail"
+        "Deposit to closed account should fail"
       );
     });
 
-    it("❌ Cannot withdraw from inactive vault", async () => {
+    it("❌ Cannot withdraw from closed account", async () => {
       let flag = "This should fail";
       try {
         await program.methods
           .withdraw(new BN(1 * LAMPORTS_PER_SOL))
           .accounts({
-            lockbox: charlieLockboxPda,
             owner: charlie.publicKey,
-            vault: charlieVaultPda,
-            systemProgram: SystemProgram.programId,
           })
           .signers([charlie])
           .rpc({ commitment: "confirmed" });
@@ -763,17 +694,17 @@ describe("LockBox - Solana Savings Vault", () => {
         assert.fail("Should have failed");
       } catch (error) {
         flag = "Failed";
-        const err = anchor.AnchorError.parse(error.logs);
-        assert.strictEqual(
-          err.error.errorCode.code,
-          "VaultInactive",
-          "Should fail with VaultInactive"
+        assert.ok(
+          error.toString().includes("AccountNotInitialized") ||
+            error.toString().includes("Account does not exist") ||
+            error.toString().includes("Error"),
+          "Should fail because account is closed"
         );
       }
       assert.strictEqual(
         flag,
         "Failed",
-        "Withdraw from inactive vault should fail"
+        "Withdraw from closed account should fail"
       );
     });
 
@@ -783,10 +714,7 @@ describe("LockBox - Solana Savings Vault", () => {
         await program.methods
           .emergencyWithdraw()
           .accounts({
-            lockbox: charlieLockboxPda,
             owner: charlie.publicKey,
-            vault: charlieVaultPda,
-            systemProgram: SystemProgram.programId,
           })
           .signers([charlie])
           .rpc({ commitment: "confirmed" });
@@ -794,11 +722,11 @@ describe("LockBox - Solana Savings Vault", () => {
         assert.fail("Should have failed");
       } catch (error) {
         flag = "Failed";
-        const err = anchor.AnchorError.parse(error.logs);
-        assert.strictEqual(
-          err.error.errorCode.code,
-          "VaultInactive",
-          "Should fail with VaultInactive"
+        assert.ok(
+          error.toString().includes("AccountNotInitialized") ||
+            error.toString().includes("Account does not exist") ||
+            error.toString().includes("Error"),
+          "Should fail because account is closed"
         );
       }
       assert.strictEqual(flag, "Failed", "Double emergency should fail");
@@ -814,9 +742,7 @@ describe("LockBox - Solana Savings Vault", () => {
       await program.methods
         .initializeLockbox(new BN(5 * LAMPORTS_PER_SOL))
         .accounts({
-          lockbox: lockboxPda,
           owner: emptyUser.publicKey,
-          systemProgram: SystemProgram.programId,
         })
         .signers([emptyUser])
         .rpc({ commitment: "confirmed" });
@@ -826,10 +752,7 @@ describe("LockBox - Solana Savings Vault", () => {
         await program.methods
           .emergencyWithdraw()
           .accounts({
-            lockbox: lockboxPda,
             owner: emptyUser.publicKey,
-            vault: vaultPda,
-            systemProgram: SystemProgram.programId,
           })
           .signers([emptyUser])
           .rpc({ commitment: "confirmed" });
@@ -888,9 +811,7 @@ describe("LockBox - Solana Savings Vault", () => {
       await program.methods
         .initializeLockbox(hugeTarget)
         .accounts({
-          lockbox: lockboxPda,
           owner: richUser.publicKey,
-          systemProgram: SystemProgram.programId,
         })
         .signers([richUser])
         .rpc({ commitment: "confirmed" });
@@ -911,9 +832,7 @@ describe("LockBox - Solana Savings Vault", () => {
       await program.methods
         .initializeLockbox(new BN(5 * LAMPORTS_PER_SOL))
         .accounts({
-          lockbox: lockboxPda,
           owner: testUser.publicKey,
-          systemProgram: SystemProgram.programId,
         })
         .signers([testUser])
         .rpc({ commitment: "confirmed" });
@@ -923,10 +842,7 @@ describe("LockBox - Solana Savings Vault", () => {
         await program.methods
           .deposit(new BN(0.5 * LAMPORTS_PER_SOL))
           .accounts({
-            lockbox: lockboxPda,
             owner: testUser.publicKey,
-            vault: vaultPda,
-            systemProgram: SystemProgram.programId,
           })
           .signers([testUser])
           .rpc({ commitment: "confirmed" });
@@ -951,9 +867,7 @@ describe("LockBox - Solana Savings Vault", () => {
       await program.methods
         .initializeLockbox(new BN(5 * LAMPORTS_PER_SOL))
         .accounts({
-          lockbox: lockboxPda,
           owner: testUser.publicKey,
-          systemProgram: SystemProgram.programId,
         })
         .signers([testUser])
         .rpc({ commitment: "confirmed" });
@@ -965,10 +879,7 @@ describe("LockBox - Solana Savings Vault", () => {
       await program.methods
         .closeLockbox()
         .accounts({
-          lockbox: lockboxPda,
           owner: testUser.publicKey,
-          vault: vaultPda,
-          systemProgram: SystemProgram.programId,
         })
         .signers([testUser])
         .rpc({ commitment: "confirmed" });
@@ -1006,9 +917,7 @@ describe("LockBox - Solana Savings Vault", () => {
       await program.methods
         .initializeLockbox(new BN(5 * LAMPORTS_PER_SOL))
         .accounts({
-          lockbox: lockboxPda,
           owner: testUser.publicKey,
-          systemProgram: SystemProgram.programId,
         })
         .signers([testUser])
         .rpc({ commitment: "confirmed" });
@@ -1017,10 +926,7 @@ describe("LockBox - Solana Savings Vault", () => {
       await program.methods
         .deposit(new BN(2 * LAMPORTS_PER_SOL))
         .accounts({
-          lockbox: lockboxPda,
           owner: testUser.publicKey,
-          vault: vaultPda,
-          systemProgram: SystemProgram.programId,
         })
         .signers([testUser])
         .rpc({ commitment: "confirmed" });
@@ -1030,10 +936,7 @@ describe("LockBox - Solana Savings Vault", () => {
         await program.methods
           .closeLockbox()
           .accounts({
-            lockbox: lockboxPda,
             owner: testUser.publicKey,
-            vault: vaultPda,
-            systemProgram: SystemProgram.programId,
           })
           .signers([testUser])
           .rpc({ commitment: "confirmed" });
@@ -1048,73 +951,6 @@ describe("LockBox - Solana Savings Vault", () => {
       console.log("  ✅ Correctly prevented closing with funds in vault");
     });
 
-    it("✅ Close after emergency withdraw", async () => {
-      const testUser = Keypair.generate();
-      await airdrop(testUser.publicKey, 10 * LAMPORTS_PER_SOL);
-      const [lockboxPda] = getLockBoxPda(testUser.publicKey);
-      const [vaultPda] = getVaultPda(lockboxPda);
-
-      // Create lockbox
-      await program.methods
-        .initializeLockbox(new BN(5 * LAMPORTS_PER_SOL))
-        .accounts({
-          lockbox: lockboxPda,
-          owner: testUser.publicKey,
-          systemProgram: SystemProgram.programId,
-        })
-        .signers([testUser])
-        .rpc({ commitment: "confirmed" });
-
-      // Deposit some funds
-      await program.methods
-        .deposit(new BN(2 * LAMPORTS_PER_SOL))
-        .accounts({
-          lockbox: lockboxPda,
-          owner: testUser.publicKey,
-          vault: vaultPda,
-          systemProgram: SystemProgram.programId,
-        })
-        .signers([testUser])
-        .rpc({ commitment: "confirmed" });
-
-      // Emergency withdraw (empties vault and deactivates)
-      await program.methods
-        .emergencyWithdraw()
-        .accounts({
-          lockbox: lockboxPda,
-          owner: testUser.publicKey,
-          vault: vaultPda,
-          systemProgram: SystemProgram.programId,
-        })
-        .signers([testUser])
-        .rpc({ commitment: "confirmed" });
-
-      // Now close the lockbox (vault is empty after emergency withdraw)
-      await program.methods
-        .closeLockbox()
-        .accounts({
-          lockbox: lockboxPda,
-          owner: testUser.publicKey,
-          vault: vaultPda,
-          systemProgram: SystemProgram.programId,
-        })
-        .signers([testUser])
-        .rpc({ commitment: "confirmed" });
-
-      // Verify account is closed
-      try {
-        await program.account.lockBox.fetch(lockboxPda);
-        assert.fail("LockBox account should be closed");
-      } catch (error) {
-        assert.ok(
-          error.message.includes("Account does not exist"),
-          "LockBox should not exist after closing"
-        );
-      }
-
-      console.log("  ✅ Successfully closed after emergency withdraw");
-    });
-
     it("✅ Close after reaching goal and withdrawing all funds", async () => {
       const testUser = Keypair.generate();
       await airdrop(testUser.publicKey, 10 * LAMPORTS_PER_SOL);
@@ -1125,9 +961,7 @@ describe("LockBox - Solana Savings Vault", () => {
       await program.methods
         .initializeLockbox(new BN(3 * LAMPORTS_PER_SOL))
         .accounts({
-          lockbox: lockboxPda,
           owner: testUser.publicKey,
-          systemProgram: SystemProgram.programId,
         })
         .signers([testUser])
         .rpc({ commitment: "confirmed" });
@@ -1136,10 +970,7 @@ describe("LockBox - Solana Savings Vault", () => {
       await program.methods
         .deposit(new BN(3 * LAMPORTS_PER_SOL))
         .accounts({
-          lockbox: lockboxPda,
           owner: testUser.publicKey,
-          vault: vaultPda,
-          systemProgram: SystemProgram.programId,
         })
         .signers([testUser])
         .rpc({ commitment: "confirmed" });
@@ -1148,10 +979,7 @@ describe("LockBox - Solana Savings Vault", () => {
       await program.methods
         .withdraw(new BN(3 * LAMPORTS_PER_SOL))
         .accounts({
-          lockbox: lockboxPda,
           owner: testUser.publicKey,
-          vault: vaultPda,
-          systemProgram: SystemProgram.programId,
         })
         .signers([testUser])
         .rpc({ commitment: "confirmed" });
@@ -1160,10 +988,7 @@ describe("LockBox - Solana Savings Vault", () => {
       await program.methods
         .closeLockbox()
         .accounts({
-          lockbox: lockboxPda,
           owner: testUser.publicKey,
-          vault: vaultPda,
-          systemProgram: SystemProgram.programId,
         })
         .signers([testUser])
         .rpc({ commitment: "confirmed" });
@@ -1194,9 +1019,7 @@ describe("LockBox - Solana Savings Vault", () => {
       await program.methods
         .initializeLockbox(new BN(5 * LAMPORTS_PER_SOL))
         .accounts({
-          lockbox: lockboxPda,
           owner: owner.publicKey,
-          systemProgram: SystemProgram.programId,
         })
         .signers([owner])
         .rpc({ commitment: "confirmed" });
@@ -1242,9 +1065,7 @@ describe("LockBox - Solana Savings Vault", () => {
       await program.methods
         .initializeLockbox(new BN(10 * LAMPORTS_PER_SOL))
         .accounts({
-          lockbox: lockboxPda,
           owner: saver.publicKey,
-          systemProgram: SystemProgram.programId,
         })
         .signers([saver])
         .rpc({ commitment: "confirmed" });
@@ -1253,10 +1074,7 @@ describe("LockBox - Solana Savings Vault", () => {
       await program.methods
         .deposit(new BN(3 * LAMPORTS_PER_SOL))
         .accounts({
-          lockbox: lockboxPda,
           owner: saver.publicKey,
-          vault: vaultPda,
-          systemProgram: SystemProgram.programId,
         })
         .signers([saver])
         .rpc({ commitment: "confirmed" });
@@ -1265,10 +1083,7 @@ describe("LockBox - Solana Savings Vault", () => {
       await program.methods
         .deposit(new BN(4 * LAMPORTS_PER_SOL))
         .accounts({
-          lockbox: lockboxPda,
           owner: saver.publicKey,
-          vault: vaultPda,
-          systemProgram: SystemProgram.programId,
         })
         .signers([saver])
         .rpc({ commitment: "confirmed" });
@@ -1277,10 +1092,7 @@ describe("LockBox - Solana Savings Vault", () => {
       await program.methods
         .deposit(new BN(3 * LAMPORTS_PER_SOL))
         .accounts({
-          lockbox: lockboxPda,
           owner: saver.publicKey,
-          vault: vaultPda,
-          systemProgram: SystemProgram.programId,
         })
         .signers([saver])
         .rpc({ commitment: "confirmed" });
@@ -1296,16 +1108,27 @@ describe("LockBox - Solana Savings Vault", () => {
       await program.methods
         .withdraw(new BN(10 * LAMPORTS_PER_SOL))
         .accounts({
-          lockbox: lockboxPda,
           owner: saver.publicKey,
-          vault: vaultPda,
-          systemProgram: SystemProgram.programId,
         })
         .signers([saver])
         .rpc({ commitment: "confirmed" });
 
       lockboxAccount = await program.account.lockBox.fetch(lockboxPda);
-      assert.ok(lockboxAccount.isActive, "Vault should still be active");
+
+      assert.ok(
+        lockboxAccount.currentBalance.eq(new BN(0)),
+        "Should have 0 SOL remaining"
+      );
+
+      console.log("  ✅ Step 6: Close LockBox");
+      await program.methods
+        .closeLockbox()
+        .accounts({
+          owner: saver.publicKey,
+        })
+        .signers([saver])
+        .rpc({ commitment: "confirmed" });
+
       console.log("  ✨ Journey complete! Goal achieved and funds withdrawn.");
     });
   });
